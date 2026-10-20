@@ -53,10 +53,10 @@ export default function App() {
   const [organization, setOrganization] = useState(null)
   const [active, setActive] = useState('overview')
   const [tasks, setTasks] = useState(() => { try { return JSON.parse(window.localStorage.getItem('workspace-hub-preview-tasks')) || DEMO_TASKS } catch { return DEMO_TASKS } })
-  const [leads, setLeads] = useState(DEMO_LEADS)
-  const [projects, setProjects] = useState(DEMO_PROJECTS)
-  const [defects, setDefects] = useState([])
-  const [decisions, setDecisions] = useState([])
+  const [leads, setLeads] = useState(() => { try { return JSON.parse(window.localStorage.getItem('workspace-hub-preview-leads')) || DEMO_LEADS } catch { return DEMO_LEADS } })
+  const [projects, setProjects] = useState(() => { try { return JSON.parse(window.localStorage.getItem('workspace-hub-preview-projects')) || DEMO_PROJECTS } catch { return DEMO_PROJECTS } })
+  const [defects, setDefects] = useState(() => { try { return JSON.parse(window.localStorage.getItem('workspace-hub-preview-defects')) || [] } catch { return [] } })
+  const [decisions, setDecisions] = useState(() => { try { return JSON.parse(window.localStorage.getItem('workspace-hub-preview-decisions')) || [] } catch { return [] } })
   const [busy, setBusy] = useState(false)
   const [loadError, setLoadError] = useState('')
   const [showCreate, setShowCreate] = useState(false)
@@ -139,7 +139,7 @@ export default function App() {
       if (createType === 'decision') setDecisions(current => [item, ...current])
       if (createType === 'project') setProjects(current => [item, ...current])
       if (createType === 'defect') setDefects(current => [item, ...current])
-      setShowCreate(false); setNotice('Added to this preview session. Connect the database to save records permanently.')
+      setShowCreate(false); setNotice('Saved in this browser only. These changes are not shared with partners.')
       return
     }
     setBusy(true); setLoadError('')
@@ -158,6 +158,12 @@ export default function App() {
     const { error } = await supabase.from('workspace_tasks').update({ status }).eq('id', task.id)
     if (error) setLoadError(error.message); else setTasks(current => current.map(row => row.id === task.id ? { ...row, status } : row))
   }
+
+  useEffect(() => { if (!isSupabaseConfigured) { try { window.localStorage.setItem('workspace-hub-preview-tasks', JSON.stringify(tasks)) } catch {} } }, [tasks])
+  useEffect(() => { if (!isSupabaseConfigured) { try { window.localStorage.setItem('workspace-hub-preview-leads', JSON.stringify(leads)) } catch {} } }, [leads])
+  useEffect(() => { if (!isSupabaseConfigured) { try { window.localStorage.setItem('workspace-hub-preview-projects', JSON.stringify(projects)) } catch {} } }, [projects])
+  useEffect(() => { if (!isSupabaseConfigured) { try { window.localStorage.setItem('workspace-hub-preview-defects', JSON.stringify(defects)) } catch {} } }, [defects])
+  useEffect(() => { if (!isSupabaseConfigured) { try { window.localStorage.setItem('workspace-hub-preview-decisions', JSON.stringify(decisions)) } catch {} } }, [decisions])
 
   const activeTasks = tasks.filter(task => task.status !== 'done' && task.status !== 'cancelled')
   const overdue = activeTasks.filter(task => task.due_date && task.due_date < new Date().toISOString().slice(0, 10))
@@ -185,7 +191,7 @@ export default function App() {
       <div className="page-content">
         {loadError && <div className="notice error-notice"><span>{loadError}</span><button onClick={() => setLoadError('')}><X size={15}/></button></div>}
         {notice && <div className="notice"><CheckCircle2 size={16}/><span>{notice}</span><button onClick={() => setNotice('')}><X size={15}/></button></div>}
-        {demo && <div className="preview-banner"><Zap size={16}/><div><strong>You're viewing a working preview</strong><span>Preview records are temporary. Connect Supabase to enable secure sign-in and permanent shared data.</span></div><button onClick={() => setNotice('Set VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY, then apply the database migration in supabase/migrations.')}>Setup guide <ArrowRight size={14}/></button></div>}
+        {demo && <div className="preview-banner"><Zap size={16}/><div><strong>You're viewing a working preview</strong><span>Preview records stay in this browser only. They are not shared with partners; connect your separate company account later for secure shared data.</span></div><button onClick={() => setNotice('Set VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY, then apply the database migration in supabase/migrations.')}>Setup guide <ArrowRight size={14}/></button></div>}
         {active === 'overview' && <Overview tasks={tasks} activeTasks={activeTasks} overdue={overdue} openLeads={openLeads} followUps={followUps} projects={projects} openDefects={openDefects} decisions={decisions} onCreate={openCreate} onNavigate={setActive} onTaskStatus={changeTaskStatus}/>}
         {active === 'tasks' && <TasksPage tasks={filteredTasks} search={search} setSearch={setSearch} onCreate={() => openCreate('task')} onStatus={changeTaskStatus}/>}
         {active === 'growth' && <GrowthPage leads={leads} onCreate={() => openCreate('lead')} />}
@@ -193,7 +199,7 @@ export default function App() {
         {active === 'qa' && <QaPage defects={defects} onCreate={() => openCreate('defect')} />}
         {active === 'decisions' && <DecisionsPage decisions={decisions} onCreate={() => openCreate('decision')} />}
       </div>
-      <footer className="app-footer"><span>Workspace Hub <span className="footer-dot">•</span> Built for shared accountability</span><span>{demo ? 'Local preview · Not connected' : organization?.name || 'Workspace'} <span className="footer-dot">•</span> <ShieldCheck size={13}/> Private workspace</span></footer>
+      <footer className="app-footer"><span>Workspace Hub <span className="footer-dot">•</span> Built for shared accountability</span><span>{demo ? 'Browser-local preview · Not shared' : organization?.name || 'Workspace'} <span className="footer-dot">•</span> <ShieldCheck size={13}/> Private workspace</span></footer>
     </main>
     {showCreate && <div className="modal-backdrop" onMouseDown={event => { if (event.target === event.currentTarget) setShowCreate(false) }}><form className="modal" onSubmit={submitCreate}><div className="modal-head"><div><p className="eyebrow">ADD TO WORKSPACE</p><h2>{createType === 'task' ? 'Create a task' : createType === 'lead' ? 'Add an opportunity' : createType === 'decision' ? 'Record a decision' : createType === 'project' ? 'Create a project' : 'Log a QA defect'}</h2></div><button type="button" className="icon-button" onClick={() => setShowCreate(false)}><X size={18}/></button></div>
       <label>{createType === 'lead' ? 'Organisation / opportunity name' : 'Title'}<input autoFocus value={form.title ?? form.organization ?? ''} onChange={event => setForm(current => ({ ...current, [createType === 'lead' ? 'organization' : 'title']: event.target.value }))} required /></label>
