@@ -31,7 +31,7 @@ The frontend only uses the Supabase publishable/anon key. Never put a service-ro
 4. Start development with npm run dev.
 5. Verify the production build with npm run build.
 
-Without Supabase variables, the app opens in **Preview mode** using temporary sample records. Preview changes are not shared or saved permanently.
+Without Supabase variables, the app opens in **Preview mode** using sample records. Preview changes are saved in the current browser's local storage so they survive refreshes, but they are not shared with other partners and are not a backup. Clearing browser storage or using another browser/device will not carry those changes over.
 
 ## Supabase setup
 
