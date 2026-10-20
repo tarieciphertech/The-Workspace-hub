@@ -52,7 +52,7 @@ export default function App() {
   const [userProfile, setUserProfile] = useState(null)
   const [organization, setOrganization] = useState(null)
   const [active, setActive] = useState('overview')
-  const [tasks, setTasks] = useState(DEMO_TASKS)
+  const [tasks, setTasks] = useState(() => { try { return JSON.parse(window.localStorage.getItem('workspace-hub-preview-tasks')) || DEMO_TASKS } catch { return DEMO_TASKS } })
   const [leads, setLeads] = useState(DEMO_LEADS)
   const [projects, setProjects] = useState(DEMO_PROJECTS)
   const [defects, setDefects] = useState([])
