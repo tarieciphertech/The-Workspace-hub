@@ -80,6 +80,7 @@ export default function App() {
 
   async function loadWorkspace() {
     setLoadError('')
+    setTasks([]); setLeads([]); setProjects([]); setDefects([]); setDecisions([])
     const { data: member, error: memberError } = await supabase
       .from('organization_members')
       .select('id, organization_id, full_name, role, organizations(id, name, status)')
@@ -136,7 +137,7 @@ export default function App() {
     }
     setBusy(true); setLoadError('')
     const table = createType === 'task' ? 'workspace_tasks' : createType === 'lead' ? 'growth_opportunities' : createType === 'decision' ? 'workspace_decisions' : 'qa_defects'
-    const payload = { ...form, organization_id: organization.id, created_by: session.user.id }
+    const payload = { ...form, organization_id: organization.id, created_by: session.user.id, owner_name: userProfile?.full_name || null }
     Object.keys(payload).forEach(key => { if (payload[key] === '') payload[key] = null })
     const { error } = await supabase.from(table).insert(payload)
     if (error) setLoadError(error.message)
@@ -144,7 +145,7 @@ export default function App() {
     setBusy(false)
   }
   async function changeTaskStatus(task, status) {
-    if (String(task.id).startsWith('d') || String(task.id).startsWith('local-') || !isSupabaseConfigured || !session) {
+    if (DEMO_TASKS.some(row => row.id === task.id) || String(task.id).startsWith('local-') || !isSupabaseConfigured || !session) {
       setTasks(current => current.map(row => row.id === task.id ? { ...row, status } : row)); return
     }
     const { error } = await supabase.from('workspace_tasks').update({ status }).eq('id', task.id)
