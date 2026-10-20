@@ -126,7 +126,11 @@ export default function App() {
   }
   async function submitCreate(event) {
     event.preventDefault()
-    if (!isSupabaseConfigured || !session || !organization) {
+    if (isSupabaseConfigured && (!session || !organization)) {
+      setLoadError('Your account must be linked to the company workspace before you can save records.')
+      return
+    }
+    if (!isSupabaseConfigured) {
       const item = { ...form, id: 'local-' + Date.now(), created_at: new Date().toISOString(), owner_name: userProfile?.full_name || 'Preview user' }
       if (createType === 'task') setTasks(current => [item, ...current])
       if (createType === 'lead') setLeads(current => [item, ...current])
