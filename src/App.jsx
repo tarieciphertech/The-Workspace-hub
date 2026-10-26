@@ -217,7 +217,7 @@ export default function App() {
         {active === 'projects' && <ProjectsPage projects={projects} onCreate={() => openCreate('project')} />}
         {active === 'qa' && <QaPage defects={defects} onCreate={() => openCreate('defect')} />}
         {active === 'decisions' && <DecisionsPage decisions={decisions} onCreate={() => openCreate('decision')} />}
-        {active === 'governance' && <GovernancePage requests={approvalRequests} events={auditEvents} role={userProfile?.role || 'preview'} currentUserId={session?.user?.id} onRefresh={loadWorkspace} onNotice={setNotice} onError={setLoadError} organization={organization} session={session} />}
+        {active === 'governance' && <GovernancePage requests={approvalRequests} events={auditEvents} role={userProfile?.role || 'preview'} currentUserId={session?.user?.id} onRefresh={loadWorkspace} onRequests={setApprovalRequests} onNotice={setNotice} onError={setLoadError} organization={organization} session={session} />}
       </div>
       <footer className="app-footer"><span>Workspace Hub <span className="footer-dot">•</span> Built for shared accountability</span><span>{demo ? 'Browser-local preview · Not shared' : organization?.name || 'Workspace'} <span className="footer-dot">•</span> <ShieldCheck size={13}/> Private workspace</span></footer>
     </main>
@@ -273,13 +273,13 @@ function QaPage({ defects, onCreate }) { return <><PageHeader eyebrow="QUALITY E
 function DecisionsPage({ decisions, onCreate }) { return <><PageHeader eyebrow="PARTNER GOVERNANCE" title="Decisions & approvals" subtitle="Record important decisions, owners and follow-through so agreements don't get lost in chats." action={<Button onClick={onCreate}><Plus size={16}/> Record decision</Button>}/><section className="panel">{decisions.length ? decisions.map(item => <div className="decision-row" key={item.id}><div className="decision-mark"><FileCheck2 size={17}/></div><div className="row-main"><strong>{item.title}</strong><span>{item.description || 'No decision notes yet'} · Owner {item.owner_name || 'Unassigned'} · Review {shortDate(item.due_date)}</span></div><Badge tone={item.status === 'approved' || item.status === 'closed' ? 'success' : 'neutral'}>{titleCase(item.status)}</Badge></div>) : <Empty title="Keep partner decisions documented" text="Record the decision, reasoning and follow-up date for important company choices."/>}</section></> }
 
 
-function GovernancePage({ requests, events, role, currentUserId, onRefresh, onNotice, onError, organization, session }) {
+function GovernancePage({ requests, events, role, onRefresh, onRequests, onNotice, onError, organization, session }) {
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [requestType, setRequestType] = useState('other')
   const [saving, setSaving] = useState(false)
   const [reviewNotes, setReviewNotes] = useState({})
-  const canReview = ['founder', 'admin', 'partner'].includes(role)
+  const canReview = !isSupabaseConfigured || ['founder', 'admin', 'partner'].includes(role)
   const pending = requests.filter(item => item.status === 'pending')
   async function submitRequest(event) {
     event.preventDefault()
@@ -294,13 +294,10 @@ function GovernancePage({ requests, events, role, currentUserId, onRefresh, onNo
     }
     if (!isSupabaseConfigured) {
       const item = { ...payload, id: 'preview-' + Date.now(), requested_by: 'preview-user', created_at: new Date().toISOString() }
-      try {
-        const current = JSON.parse(window.localStorage.getItem('workspace-hub-preview-approvals') || '[]')
-        window.localStorage.setItem('workspace-hub-preview-approvals', JSON.stringify([item, ...current]))
-      } catch {}
+      onRequests([item, ...requests])
       onNotice('Approval request saved in this browser only; no partner has been notified.')
       setTitle(''); setDescription('')
-      window.location.reload()
+      setSaving(false)
       return
     }
     if (!session?.user || !organization?.id) {
@@ -323,13 +320,12 @@ function GovernancePage({ requests, events, role, currentUserId, onRefresh, onNo
     if (!canReview) return
     if (!isSupabaseConfigured) {
       if (item.requested_by === 'preview-user') {
-        onError('Preview mode does not simulate separate partner identities, so self-approval cannot be safely tested.')
+        onError('Preview mode uses one simulated identity, so a requester cannot review their own request. Use separate authenticated partner accounts to test approvals.')
         return
       }
       const updated = requests.map(row => row.id === item.id ? { ...row, status: decision, reviewed_by: 'preview-reviewer', reviewed_at: new Date().toISOString(), reviewer_note: reviewNotes[item.id] || null } : row)
-      try { window.localStorage.setItem('workspace-hub-preview-approvals', JSON.stringify(updated)) } catch {}
+      onRequests(updated)
       onNotice('Preview approval updated locally only.')
-      window.location.reload()
       return
     }
     if (!session?.user?.id) return
@@ -359,7 +355,7 @@ function GovernancePage({ requests, events, role, currentUserId, onRefresh, onNo
           <div className="row-main"><strong>{item.title}</strong><span>{titleCase(item.request_type)} · Requested {shortDate((item.created_at || '').slice(0,10))} · {item.description || 'No additional context'}</span>
             {item.status === 'pending' && canReview && <><textarea rows="2" value={reviewNotes[item.id] || ''} onChange={event => setReviewNotes(current => ({ ...current, [item.id]: event.target.value }))} placeholder="Optional reviewer note"/><div className="inline-actions"><Button variant="secondary" onClick={() => reviewRequest(item, 'rejected')}>Reject</Button><Button onClick={() => reviewRequest(item, 'approved')}>Approve <CheckCircle2 size={14}/></Button></div></>}
           </div><Badge tone={item.status === 'approved' ? 'success' : item.status === 'rejected' ? 'warning' : 'neutral'}>{titleCase(item.status)}</Badge>
-        </div>)}</div> : <Empty title="No approval requests yet" text="Create a request for a purchase, finance decision, access change, deployment or external communication."/ >}
+        </div>)}</div> : <Empty title="No approval requests yet" text="Create a request for a purchase, finance decision, access change, deployment or external communication." />}
       </section>
       <section className="panel">
         <div className="panel-heading"><div><p className="eyebrow">NEW REQUEST</p><h2>Ask for approval</h2></div></div>
