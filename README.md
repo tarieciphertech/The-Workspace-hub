@@ -13,7 +13,7 @@ The platform is designed for three founding partners, with Cipher and Shelton le
 - **Projects:** shared initiatives with status, progress, business-line association and deadlines.
 - **Quality assurance:** defect register with severity, status, reproduction notes and retesting stages; test-case storage is included in the database foundation.
 - **Decisions:** a record of partner decisions, context, status and review date.
-- **Governance foundation:** database structures for approval requests and metadata-only audit history are prepared in a migration. The approval and audit screens are not yet implemented.
+- **Approvals & audit:** the UI now includes an approval-request form, pending/reviewed request list, partner approve/reject actions, and a manager-only audit-history view. In Preview mode, requests are saved in this browser only; connected mode requires the governance migration and separate authenticated partner accounts.
 - **AI agent architecture:** a proposal for specialist agents and safe orchestration is documented; no agent API or automated external action is live.
 - **Business units:** a database foundation for adding more business lines later.
 
@@ -27,13 +27,16 @@ The latest governance stage adds:
    - Adds an audit-event table and triggers for task, sales opportunity, project, QA defect, decision, finance and approval-request changes.
    - Audit events store actor, action, table, record ID, timestamp and changed field names—not full row snapshots.
    - Audit reads are limited to workspace managers; clients do not receive direct audit-table write permissions.
-2. `docs/GOVERNANCE_FOUNDATION.md`
+2. `src/App.jsx`
+   - Adds the **Approvals & audit** navigation page, request submission form, review notes, approve/reject controls, audit-event table, role-aware audit visibility and local-only preview persistence.
+   - Connected review actions call the `review_workspace_approval` database function; the browser does not directly update approval decisions.
+3. `docs/GOVERNANCE_FOUNDATION.md`
    - Explains the schema, permission boundaries, current gaps and a verification checklist for when the separate company database is ready.
-3. Earlier finance and AI architecture work remains in place:
+4. Earlier finance and AI architecture work remains in place:
    - `supabase/migrations/20261026000000_finance_entries.sql` defines the finance records table.
    - `docs/AI_AGENT_ARCHITECTURE.md` documents the proposed orchestration model and guardrails.
 
-**Important:** these migrations are repository files only. They have not been applied to Supabase or any other database. The app does not yet include the approval queue or audit-history screens, and the governance foundation needs testing with separate roles before production use.
+**Important:** these migrations are repository files only. They have not been applied to Supabase or any other database. The new screens are wired to the expected database schema but cannot show shared records or perform real reviews until the separate company database is configured and the migrations are applied. Preview mode is not a security test and cannot simulate distinct partner identities. Test the SQL and permissions with separate authenticated accounts before production use.
 
 ## Tech stack
 
@@ -115,7 +118,7 @@ The repository currently focuses on the application foundation and build validat
 - [x] Governance migration for approval requests and audit events prepared in GitHub
 - [ ] Apply and test migrations on the new company's separate Supabase project
 - [ ] Verify role boundaries with separate test accounts
-- [ ] Build approval queue and audit-history UI
+- [x] Build approval queue and audit-history UI (requires connected governance schema for shared operation)
 - [ ] Add fine-grained role permissions and backup/recovery runbook
 - [ ] Add deadline reminders and sales follow-up drafts with explicit review/approval
 - [ ] Implement server-side AI orchestration only after the governance and audit checks are tested
