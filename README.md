@@ -4,16 +4,36 @@ A company-neutral operations workspace for a new multi-partner umbrella company 
 
 The platform is designed for three founding partners, with Cipher and Shelton leading IT, and supports multiple business lines under one company workspace.
 
-## Initial product areas
+## Product areas
 
 - **Partner overview:** open work, overdue items, opportunities, active projects, QA defects and decisions needing attention.
 - **Tasks and workflow:** priorities, departments, deadlines, status and clear ownership.
 - **Growth and sales:** school-system opportunities, software testing/QA prospects, follow-ups and pipeline stages.
-- **Finance:** browser-preview tracking for budgets, expenses, customer invoices and income, with currency-separated summaries and an indicative cash-basis surplus. The database migration is in the repository but has not been applied to any account.
+- **Finance:** browser-preview tracking for budgets, expenses, customer invoices and income, with currency-separated summaries and an indicative cash-basis surplus. This is a planning aid, not an accounting ledger or tax report.
 - **Projects:** shared initiatives with status, progress, business-line association and deadlines.
 - **Quality assurance:** defect register with severity, status, reproduction notes and retesting stages; test-case storage is included in the database foundation.
 - **Decisions:** a record of partner decisions, context, status and review date.
+- **Governance foundation:** database structures for approval requests and metadata-only audit history are prepared in a migration. The approval and audit screens are not yet implemented.
+- **AI agent architecture:** a proposal for specialist agents and safe orchestration is documented; no agent API or automated external action is live.
 - **Business units:** a database foundation for adding more business lines later.
+
+## Recent codebase changes
+
+The latest governance stage adds:
+
+1. `supabase/migrations/20261027000000_governance_foundation.sql`
+   - Adds organization-scoped approval requests for finance, external messages, access changes, purchases, deployments, data changes and other actions.
+   - Adds a controlled review function for authorized workspace managers. A requester cannot approve or reject their own request.
+   - Adds an audit-event table and triggers for task, sales opportunity, project, QA defect, decision, finance and approval-request changes.
+   - Audit events store actor, action, table, record ID, timestamp and changed field names—not full row snapshots.
+   - Audit reads are limited to workspace managers; clients do not receive direct audit-table write permissions.
+2. `docs/GOVERNANCE_FOUNDATION.md`
+   - Explains the schema, permission boundaries, current gaps and a verification checklist for when the separate company database is ready.
+3. Earlier finance and AI architecture work remains in place:
+   - `supabase/migrations/20261026000000_finance_entries.sql` defines the finance records table.
+   - `docs/AI_AGENT_ARCHITECTURE.md` documents the proposed orchestration model and guardrails.
+
+**Important:** these migrations are repository files only. They have not been applied to Supabase or any other database. The app does not yet include the approval queue or audit-history screens, and the governance foundation needs testing with separate roles before production use.
 
 ## Tech stack
 
@@ -26,18 +46,23 @@ The frontend only uses the Supabase publishable/anon key. Never put a service-ro
 
 ## Run locally
 
-1. Copy .env.example to .env.local.
-2. Set VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY to your Supabase project values.
-3. Install dependencies with npm install.
-4. Start development with npm run dev.
-5. Verify the production build with npm run build.
+1. Copy `.env.example` to `.env.local`.
+2. Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` to the **new company's dedicated Supabase project** values when that project is ready.
+3. Install dependencies with `npm install`.
+4. Start development with `npm run dev`.
+5. Verify the production build with `npm run build`.
 
 Without Supabase variables, the app opens in **Preview mode** using sample records. Preview changes are saved in the current browser's local storage so they survive refreshes, but they are not shared with other partners and are not a backup. Clearing browser storage or using another browser/device will not carry those changes over.
 
-## Supabase setup
+## Supabase setup — when the partners are ready
 
-1. Create a dedicated Supabase project for the new company. Do not reuse Cypher Technologies' existing database.
-2. In Supabase SQL Editor, run `supabase/migrations/20261020000000_workspace_hub_foundation.sql`, then `supabase/migrations/20261026000000_finance_entries.sql`. Do this only after connecting the separate account for the new company; no existing Supabase account has been changed.
+Do not connect this project to Cypher Technologies' existing Supabase account. Use a dedicated project/account for the new company.
+
+1. Create the separate Supabase project and confirm that the partners agree on access ownership.
+2. Review and apply the migrations in chronological order:
+   - `supabase/migrations/20261020000000_workspace_hub_foundation.sql`
+   - `supabase/migrations/20261026000000_finance_entries.sql`
+   - `supabase/migrations/20261027000000_governance_foundation.sql`
 3. Create the first partner's user in Supabase Authentication.
 4. Copy that user's UUID from Authentication → Users.
 5. In SQL Editor, create the organization and initial founder membership. Replace the two placeholders first:
@@ -59,32 +84,39 @@ select
 from new_org;
 ```
 
-6. Add Shelton and the third partner as Supabase Auth users, then add one membership row for each user using the same organization UUID. Use roles such as it_lead for Shelton and partner for the third partner. The founder/partner membership can manage workspace membership; ordinary members cannot.
-7. Set the two Vite variables in .env.local and restart Vite.
+6. Add Shelton and the third partner as Supabase Auth users, then add one membership row for each user using the same organization UUID. Agree on roles before giving real access.
+7. Set the two Vite variables in `.env.local` and restart Vite.
+8. Test access with separate founder/partner, IT lead and member accounts before entering confidential information.
 
-### Security notes
+### Security and governance notes
 
-- Each operational record belongs to an organization_id.
-- RLS policies check that the authenticated user is an active member of the record's organization.
-- Partner-level membership management is protected separately from day-to-day records.
-- Do not expose a Supabase service-role key in GitHub Actions variables prefixed with VITE_.
-- The finance view is a planning aid, not a full accounting ledger, tax report, or audited profitability statement.
-- The initial schema is a foundation. Before using real confidential financial data, review finance permissions, add immutable audit history, approval controls, and documented backup/recovery procedures.
-- The AI agent orchestration concept is documented in `docs/AI_AGENT_ARCHITECTURE.md`. It is a proposed architecture; no agent API or automated external action is active.
+- Each operational record belongs to an `organization_id`; RLS is intended to scope access to active workspace members.
+- The current schema treats `founder`, `admin` and `partner` as workspace managers. This is a starting rule, not a complete fine-grained permission model.
+- The governance migration adds an approval-review function and metadata-only audit triggers, but no approval/audit UI is wired yet.
+- The audit trail begins only after its migration is applied; it does not backfill prior activity.
+- Backup/recovery procedures and a restore drill are not yet implemented. Complete these before production use of important company records.
+- The finance view is not a full accounting ledger, tax report, or audited profitability statement.
+- AI agent orchestration is a proposal in `docs/AI_AGENT_ARCHITECTURE.md`; no agent API, automated email, scheduled job, or external action is active.
+- Keep OpenAI and integration secrets server-side. Require human approval for financial, external, destructive or company-representing actions until the partners explicitly agree otherwise.
 
 ## Deployment
 
 The repository currently focuses on the application foundation and build validation. Configure the chosen hosting and domain after the company name and deployment approach are agreed. The production site should use its own Supabase project and HTTPS.
 
-## Current implementation status
+## Implementation status
 
-- [x] Initialize a clean, company-neutral repository
-- [x] Responsive operations dashboard and navigation
-- [x] Preview mode with temporary sample records
+- [x] Company-neutral React + Vite foundation and responsive operations dashboard
+- [x] Preview mode with browser-local persistence for supported records
 - [x] Supabase Auth sign-in foundation
-- [x] Organization and membership model
-- [x] RLS-protected tasks, opportunities, projects, QA records and decisions
-- [ ] Apply migration to the new Supabase project and bootstrap founder account
-- [ ] Invite all three partners and verify role boundaries
-- [ ] Add assignment UX, project creation, test-case execution and activity/audit history
+- [x] Organization and membership model with RLS foundation
+- [x] Task, sales opportunity, project, QA defect and decision pages
+- [x] Finance page and migration file
+- [x] Proposed AI agent architecture and safety guardrails documented
+- [x] Governance migration for approval requests and audit events prepared in GitHub
+- [ ] Apply and test migrations on the new company's separate Supabase project
+- [ ] Verify role boundaries with separate test accounts
+- [ ] Build approval queue and audit-history UI
+- [ ] Add fine-grained role permissions and backup/recovery runbook
+- [ ] Add deadline reminders and sales follow-up drafts with explicit review/approval
+- [ ] Implement server-side AI orchestration only after the governance and audit checks are tested
 - [ ] Configure CI deployment after hosting is chosen
