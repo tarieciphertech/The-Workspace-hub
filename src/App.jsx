@@ -3,7 +3,7 @@ import {
   Activity, ArrowDownRight, ArrowRight, ArrowUpRight, Bell, BriefcaseBusiness,
   Building2, CalendarClock, CheckCircle2, ChevronDown, CircleHelp, ClipboardCheck,
   DollarSign, FileCheck2, FolderKanban, LayoutDashboard, ListTodo, LogOut, Menu, Plus,
-  Search, Settings2, ShieldCheck, Target, Users, X, Zap
+  Search, Settings2, ShieldCheck, Target, Users, X, Zap, ClipboardList, History
 } from 'lucide-react'
 import { isSupabaseConfigured, supabase } from './lib/supabase'
 
@@ -15,6 +15,7 @@ const NAV = [
   { id: 'projects', label: 'Projects', icon: FolderKanban, group: 'DELIVERY' },
   { id: 'qa', label: 'Quality assurance', icon: ClipboardCheck, group: 'DELIVERY' },
   { id: 'decisions', label: 'Decisions', icon: FileCheck2, group: 'MANAGEMENT' },
+  { id: 'governance', label: 'Approvals & audit', icon: ShieldCheck, group: 'MANAGEMENT' },
 ]
 const DEMO_TASKS = [
   { id: 'd1', title: 'Prepare school systems marketing plan', department: 'Growth & marketing', priority: 'high', status: 'in_progress', due_date: '2026-10-22', owner_name: 'Shelton' },
@@ -59,6 +60,8 @@ export default function App() {
   const [defects, setDefects] = useState(() => { try { return JSON.parse(window.localStorage.getItem('workspace-hub-preview-defects')) || [] } catch { return [] } })
   const [decisions, setDecisions] = useState(() => { try { return JSON.parse(window.localStorage.getItem('workspace-hub-preview-decisions')) || [] } catch { return [] } })
   const [financeEntries, setFinanceEntries] = useState(() => { try { return JSON.parse(window.localStorage.getItem('workspace-hub-preview-finance')) || [] } catch { return [] } })
+  const [approvalRequests, setApprovalRequests] = useState(() => { try { return JSON.parse(window.localStorage.getItem('workspace-hub-preview-approvals')) || [] } catch { return [] } })
+  const [auditEvents, setAuditEvents] = useState([])
   const [busy, setBusy] = useState(false)
   const [loadError, setLoadError] = useState('')
   const [showCreate, setShowCreate] = useState(false)
@@ -82,7 +85,7 @@ export default function App() {
 
   async function loadWorkspace() {
     setLoadError('')
-    setTasks([]); setLeads([]); setProjects([]); setDefects([]); setDecisions([]); setFinanceEntries([])
+    setTasks([]); setLeads([]); setProjects([]); setDefects([]); setDecisions([]); setFinanceEntries([]); setApprovalRequests([]); setAuditEvents([])
     const { data: member, error: memberError } = await supabase
       .from('organization_members')
       .select('id, organization_id, full_name, role, organizations(id, name, status)')
@@ -99,6 +102,7 @@ export default function App() {
       supabase.from('qa_defects').select('*').eq('organization_id', orgId).order('created_at', { ascending: false }).limit(100),
       supabase.from('workspace_decisions').select('*').eq('organization_id', orgId).order('created_at', { ascending: false }).limit(100),
       supabase.from('finance_entries').select('*').eq('organization_id', orgId).order('created_at', { ascending: false }).limit(200),
+      supabase.from('workspace_approval_requests').select('*').eq('organization_id', orgId).order('created_at', { ascending: false }).limit(100),
     ])
     const failure = results.find(result => result.error)
     if (failure) { setLoadError(failure.error.message); return }
@@ -108,6 +112,11 @@ export default function App() {
     setDefects(results[3].data || [])
     setDecisions(results[4].data || [])
     setFinanceEntries(results[5].data || [])
+    setApprovalRequests(results[6].data || [])
+    if (['founder', 'admin', 'partner'].includes(member.role)) {
+      const { data: auditData, error: auditError } = await supabase.from('workspace_audit_events').select('*').eq('organization_id', orgId).order('occurred_at', { ascending: false }).limit(100)
+      if (!auditError) setAuditEvents(auditData || [])
+    }
   }
 
   async function signIn(event) {
@@ -172,6 +181,7 @@ export default function App() {
   useEffect(() => { if (!isSupabaseConfigured) { try { window.localStorage.setItem('workspace-hub-preview-defects', JSON.stringify(defects)) } catch {} } }, [defects])
   useEffect(() => { if (!isSupabaseConfigured) { try { window.localStorage.setItem('workspace-hub-preview-decisions', JSON.stringify(decisions)) } catch {} } }, [decisions])
   useEffect(() => { if (!isSupabaseConfigured) { try { window.localStorage.setItem('workspace-hub-preview-finance', JSON.stringify(financeEntries)) } catch {} } }, [financeEntries])
+  useEffect(() => { if (!isSupabaseConfigured) { try { window.localStorage.setItem('workspace-hub-preview-approvals', JSON.stringify(approvalRequests)) } catch {} } }, [approvalRequests])
 
   const activeTasks = tasks.filter(task => task.status !== 'done' && task.status !== 'cancelled')
   const overdue = activeTasks.filter(task => task.due_date && task.due_date < new Date().toISOString().slice(0, 10))
@@ -207,6 +217,7 @@ export default function App() {
         {active === 'projects' && <ProjectsPage projects={projects} onCreate={() => openCreate('project')} />}
         {active === 'qa' && <QaPage defects={defects} onCreate={() => openCreate('defect')} />}
         {active === 'decisions' && <DecisionsPage decisions={decisions} onCreate={() => openCreate('decision')} />}
+        {active === 'governance' && <GovernancePage requests={approvalRequests} events={auditEvents} role={userProfile?.role || 'preview'} currentUserId={session?.user?.id} onRefresh={loadWorkspace} onNotice={setNotice} onError={setLoadError} organization={organization} session={session} />}
       </div>
       <footer className="app-footer"><span>Workspace Hub <span className="footer-dot">•</span> Built for shared accountability</span><span>{demo ? 'Browser-local preview · Not shared' : organization?.name || 'Workspace'} <span className="footer-dot">•</span> <ShieldCheck size={13}/> Private workspace</span></footer>
     </main>
@@ -260,3 +271,109 @@ function FinancePage({ entries, onCreate }) {
 function ProjectsPage({ projects, onCreate }) { return <><PageHeader eyebrow="DELIVERY MANAGEMENT" title="Projects" subtitle="Group related work into initiatives, milestones and measurable outcomes." action={<Button onClick={onCreate}><Plus size={16}/> New project</Button>}/><div className="project-cards">{projects.map(project => <div className="panel project-card" key={project.id}><div className="project-card-icon"><BriefcaseBusiness size={19}/></div><Badge tone={project.status === 'done' ? 'success' : 'neutral'}>{titleCase(project.status)}</Badge><h3>{project.title}</h3><p>{project.description || 'A shared initiative tracked by the company partners.'}</p><div className="project-card-meta"><span><Users size={14}/> {project.owner_name || 'Owner to be assigned'}</span><span><CalendarClock size={14}/> {shortDate(project.due_date)}</span></div><div className="progress-track"><span style={{ width: Math.max(0, Math.min(100, Number(project.progress || 0))) + '%' }}/></div><small>{Number(project.progress || 0)}% complete</small></div>)}{!projects.length && <div className="panel"><Empty title="Your project space is ready" text="Create your first project to coordinate milestones and delivery." /></div>}</div></> }
 function QaPage({ defects, onCreate }) { return <><PageHeader eyebrow="QUALITY ENGINEERING" title="Quality assurance" subtitle="Record defects, manage retesting and protect the quality of every delivery." action={<Button onClick={onCreate}><Plus size={16}/> Log defect</Button>}/><div className="stats-grid three"><Stat label="Open defects" value={defects.filter(item => !['closed','wont_fix'].includes(item.status)).length} note="Awaiting resolution" icon={ShieldCheck}/><Stat label="High / critical" value={defects.filter(item => ['high','critical'].includes(item.severity) && !['closed','wont_fix'].includes(item.status)).length} note="Prioritise these" icon={Activity}/><Stat label="Ready to retest" value={defects.filter(item => item.status === 'retest').length} note="Verification required" icon={ClipboardCheck}/></div><section className="panel"><div className="panel-heading"><div><p className="eyebrow">DEFECT REGISTER</p><h2>Issues & fixes</h2></div></div>{defects.length ? <div className="table-wrap"><table><thead><tr><th>Defect</th><th>Severity</th><th>Status</th><th>Owner</th><th>Description</th></tr></thead><tbody>{defects.map(item => <tr key={item.id}><td><strong>{item.title}</strong></td><td><Badge tone={['high','critical'].includes(item.severity) ? 'warning' : 'neutral'}>{titleCase(item.severity)}</Badge></td><td>{titleCase(item.status)}</td><td>{item.owner_name || 'Unassigned'}</td><td>{item.description || '—'}</td></tr>)}</tbody></table></div> : <Empty title="No defects logged" text="Log and track defects from testing through fix verification."/>}</section></> }
 function DecisionsPage({ decisions, onCreate }) { return <><PageHeader eyebrow="PARTNER GOVERNANCE" title="Decisions & approvals" subtitle="Record important decisions, owners and follow-through so agreements don't get lost in chats." action={<Button onClick={onCreate}><Plus size={16}/> Record decision</Button>}/><section className="panel">{decisions.length ? decisions.map(item => <div className="decision-row" key={item.id}><div className="decision-mark"><FileCheck2 size={17}/></div><div className="row-main"><strong>{item.title}</strong><span>{item.description || 'No decision notes yet'} · Owner {item.owner_name || 'Unassigned'} · Review {shortDate(item.due_date)}</span></div><Badge tone={item.status === 'approved' || item.status === 'closed' ? 'success' : 'neutral'}>{titleCase(item.status)}</Badge></div>) : <Empty title="Keep partner decisions documented" text="Record the decision, reasoning and follow-up date for important company choices."/>}</section></> }
+
+
+function GovernancePage({ requests, events, role, currentUserId, onRefresh, onNotice, onError, organization, session }) {
+  const [title, setTitle] = useState('')
+  const [description, setDescription] = useState('')
+  const [requestType, setRequestType] = useState('other')
+  const [saving, setSaving] = useState(false)
+  const [reviewNotes, setReviewNotes] = useState({})
+  const canReview = ['founder', 'admin', 'partner'].includes(role)
+  const pending = requests.filter(item => item.status === 'pending')
+  async function submitRequest(event) {
+    event.preventDefault()
+    if (!title.trim()) return
+    setSaving(true)
+    const payload = {
+      title: title.trim(),
+      description: description.trim() || null,
+      request_type: requestType,
+      status: 'pending',
+      context: {},
+    }
+    if (!isSupabaseConfigured) {
+      const item = { ...payload, id: 'preview-' + Date.now(), requested_by: 'preview-user', created_at: new Date().toISOString() }
+      try {
+        const current = JSON.parse(window.localStorage.getItem('workspace-hub-preview-approvals') || '[]')
+        window.localStorage.setItem('workspace-hub-preview-approvals', JSON.stringify([item, ...current]))
+      } catch {}
+      onNotice('Approval request saved in this browser only; no partner has been notified.')
+      setTitle(''); setDescription('')
+      window.location.reload()
+      return
+    }
+    if (!session?.user || !organization?.id) {
+      onError('Sign in and join the company workspace before creating an approval request.')
+      setSaving(false)
+      return
+    }
+    const { error } = await supabase.from('workspace_approval_requests').insert({
+      ...payload, organization_id: organization.id, requested_by: session.user.id,
+    })
+    if (error) onError(error.message)
+    else {
+      setTitle(''); setDescription('')
+      onNotice('Approval request submitted.')
+      await onRefresh()
+    }
+    setSaving(false)
+  }
+  async function reviewRequest(item, decision) {
+    if (!canReview) return
+    if (!isSupabaseConfigured) {
+      if (item.requested_by === 'preview-user') {
+        onError('Preview mode does not simulate separate partner identities, so self-approval cannot be safely tested.')
+        return
+      }
+      const updated = requests.map(row => row.id === item.id ? { ...row, status: decision, reviewed_by: 'preview-reviewer', reviewed_at: new Date().toISOString(), reviewer_note: reviewNotes[item.id] || null } : row)
+      try { window.localStorage.setItem('workspace-hub-preview-approvals', JSON.stringify(updated)) } catch {}
+      onNotice('Preview approval updated locally only.')
+      window.location.reload()
+      return
+    }
+    if (!session?.user?.id) return
+    if (item.requested_by === session.user.id) {
+      onError('You cannot approve or reject a request you submitted.')
+      return
+    }
+    const { error } = await supabase.rpc('review_workspace_approval', {
+      request_id: item.id, decision, note: reviewNotes[item.id] || null,
+    })
+    if (error) onError(error.message)
+    else { onNotice('Request ' + decision + '.'); await onRefresh() }
+  }
+  return <>
+    <PageHeader eyebrow="SECURITY & GOVERNANCE" title="Approvals & audit" subtitle="Route sensitive decisions through partner review and inspect recorded workspace activity." />
+    <div className="notice"><ShieldCheck size={16}/><span>Governance controls are being introduced. Preview requests are local-only; connected requests require the governance migration to be applied to the company's separate database.</span></div>
+    <div className="stats-grid three">
+      <Stat label="Pending requests" value={pending.length} note="Awaiting partner review" icon={ClipboardList}/>
+      <Stat label="Reviewed requests" value={requests.filter(item => ['approved','rejected'].includes(item.status)).length} note="Approved or rejected" icon={CheckCircle2}/>
+      <Stat label="Audit events" value={events.length} note={canReview ? 'Latest events visible to managers' : 'Manager access required'} icon={History}/>
+    </div>
+    <div className="content-grid">
+      <section className="panel">
+        <div className="panel-heading"><div><p className="eyebrow">REQUEST REVIEW</p><h2>Approval queue</h2></div><Badge>{pending.length} pending</Badge></div>
+        {requests.length ? <div className="decision-list">{requests.map(item => <div className="decision-row" key={item.id}>
+          <div className="decision-mark"><ClipboardList size={17}/></div>
+          <div className="row-main"><strong>{item.title}</strong><span>{titleCase(item.request_type)} · Requested {shortDate((item.created_at || '').slice(0,10))} · {item.description || 'No additional context'}</span>
+            {item.status === 'pending' && canReview && <><textarea rows="2" value={reviewNotes[item.id] || ''} onChange={event => setReviewNotes(current => ({ ...current, [item.id]: event.target.value }))} placeholder="Optional reviewer note"/><div className="inline-actions"><Button variant="secondary" onClick={() => reviewRequest(item, 'rejected')}>Reject</Button><Button onClick={() => reviewRequest(item, 'approved')}>Approve <CheckCircle2 size={14}/></Button></div></>}
+          </div><Badge tone={item.status === 'approved' ? 'success' : item.status === 'rejected' ? 'warning' : 'neutral'}>{titleCase(item.status)}</Badge>
+        </div>)}</div> : <Empty title="No approval requests yet" text="Create a request for a purchase, finance decision, access change, deployment or external communication."/ >}
+      </section>
+      <section className="panel">
+        <div className="panel-heading"><div><p className="eyebrow">NEW REQUEST</p><h2>Ask for approval</h2></div></div>
+        <form className="stack-form" onSubmit={submitRequest}>
+          <label>Request title<input value={title} onChange={event => setTitle(event.target.value)} required placeholder="e.g. Approve software subscription"/></label>
+          <label>Request category<select value={requestType} onChange={event => setRequestType(event.target.value)}><option value="finance">Finance</option><option value="external_message">External message</option><option value="access_change">Access change</option><option value="purchase">Purchase</option><option value="deployment">Deployment</option><option value="data_change">Data change</option><option value="other">Other</option></select></label>
+          <label>Context and justification<textarea rows="4" value={description} onChange={event => setDescription(event.target.value)} placeholder="Why is approval needed? Include cost or impact where relevant."/></label>
+          <Button type="submit" disabled={saving}>{saving ? 'Submitting…' : 'Submit for review'} <ArrowRight size={15}/></Button>
+        </form>
+      </section>
+    </div>
+    <section className="panel">
+      <div className="panel-heading"><div><p className="eyebrow">ACTIVITY HISTORY</p><h2>Audit trail</h2></div><Badge>{events.length} events</Badge></div>
+      {canReview ? events.length ? <div className="table-wrap"><table><thead><tr><th>Time</th><th>Action</th><th>Area</th><th>Record</th><th>Changed fields</th></tr></thead><tbody>{events.map(event => <tr key={event.id}><td>{event.occurred_at ? new Date(event.occurred_at).toLocaleString() : '—'}</td><td>{titleCase(event.action)}</td><td>{titleCase(event.table_name)}</td><td>{event.record_id || '—'}</td><td>{Array.isArray(event.changed_fields) && event.changed_fields.length ? event.changed_fields.join(', ') : 'Record created/deleted'}</td></tr>)}</tbody></table></div> : <Empty title="No audit events visible" text={isSupabaseConfigured ? 'Events appear after the governance migration is applied and tracked records change.' : 'Preview mode does not generate database audit events. Connect the separate company database after review.'}/> : <Empty title="Manager access required" text="Only founder, admin and partner roles can view audit history under the current permission model."/>}
+    </section>
+  </>
+}
