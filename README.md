@@ -9,6 +9,7 @@ The platform is designed for three founding partners, with Cipher and Shelton le
 - **Partner overview:** open work, overdue items, opportunities, active projects, QA defects and decisions needing attention.
 - **Tasks and workflow:** priorities, departments, deadlines, status and clear ownership.
 - **Growth and sales:** school-system opportunities, software testing/QA prospects, follow-ups and pipeline stages.
+- **Finance:** browser-preview tracking for budgets, expenses, customer invoices and income, with currency-separated summaries and an indicative cash-basis surplus. The database migration is in the repository but has not been applied to any account.
 - **Projects:** shared initiatives with status, progress, business-line association and deadlines.
 - **Quality assurance:** defect register with severity, status, reproduction notes and retesting stages; test-case storage is included in the database foundation.
 - **Decisions:** a record of partner decisions, context, status and review date.
@@ -36,7 +37,7 @@ Without Supabase variables, the app opens in **Preview mode** using sample recor
 ## Supabase setup
 
 1. Create a dedicated Supabase project for the new company. Do not reuse Cypher Technologies' existing database.
-2. In Supabase SQL Editor, run supabase/migrations/20261020000000_workspace_hub_foundation.sql.
+2. In Supabase SQL Editor, run `supabase/migrations/20261020000000_workspace_hub_foundation.sql`, then `supabase/migrations/20261026000000_finance_entries.sql`. Do this only after connecting the separate account for the new company; no existing Supabase account has been changed.
 3. Create the first partner's user in Supabase Authentication.
 4. Copy that user's UUID from Authentication → Users.
 5. In SQL Editor, create the organization and initial founder membership. Replace the two placeholders first:
@@ -67,7 +68,9 @@ from new_org;
 - RLS policies check that the authenticated user is an active member of the record's organization.
 - Partner-level membership management is protected separately from day-to-day records.
 - Do not expose a Supabase service-role key in GitHub Actions variables prefixed with VITE_.
-- The initial schema is a foundation. Before using real confidential financial data, extend it with explicit finance permissions, audit history, approval controls and backup/recovery procedures.
+- The finance view is a planning aid, not a full accounting ledger, tax report, or audited profitability statement.
+- The initial schema is a foundation. Before using real confidential financial data, review finance permissions, add immutable audit history, approval controls, and documented backup/recovery procedures.
+- The AI agent orchestration concept is documented in `docs/AI_AGENT_ARCHITECTURE.md`. It is a proposed architecture; no agent API or automated external action is active.
 
 ## Deployment
 
