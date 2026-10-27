@@ -27,4 +27,4 @@
 - Avoid stretching, recolouring or recreating the supplied dragon/S emblem inconsistently. Use the approved source artwork when a high-fidelity logo asset is available.
 
 ## Current implementation note
-The app uses a lightweight typographic “S” mark until the supplied high-resolution logo artwork is added as a repository asset. This keeps the UI branded without embedding a low-resolution screenshot as the logo.
+The SVG logo asset at `public/synexis-mark.svg` is currently used consistently in the sidebar, sign-in screen and browser favicon. It is a lightweight interim mark, not a faithful reproduction of the supplied purple dragon emblem. Replace this file with a properly cropped/optimized export of the approved original artwork when that binary asset is available in the repository workflow.
