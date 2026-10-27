@@ -1,8 +1,12 @@
-# The Workspace Hub
+# Synexis Technologies — Workspace Hub
 
-A company-neutral operations workspace for a new multi-partner umbrella company being registered in Zimbabwe. The company name is intentionally configurable and has not been hard-coded.
+**Brand:** Synexis Technologies  
+**Tagline:** Beyond the Expected.  
+**Visual identity:** near-black / midnight backgrounds, luminous violet and purple accents, silver-white wordmark, restrained glow effects.
 
-The platform is designed for three founding partners, with Cipher and Shelton leading IT, and supports multiple business lines under one company workspace.
+The Workspace Hub is the internal operations workspace for Synexis Technologies, the new multi-partner umbrella company being registered in Zimbabwe. This project is separate from Cypher Technologies and must use its own company accounts, infrastructure and data.
+
+The platform is designed for three founding partners, with Cipher and Shelton leading IT, and supports multiple business lines under one company workspace. Product and company-facing copy should use **Synexis Technologies**; “Workspace Hub” remains the name of the internal product.
 
 ## Product areas
 
@@ -95,7 +99,7 @@ from new_org;
 
 - Each operational record belongs to an `organization_id`; RLS is intended to scope access to active workspace members.
 - The current schema treats `founder`, `admin` and `partner` as workspace managers. This is a starting rule, not a complete fine-grained permission model.
-- The governance migration adds an approval-review function and metadata-only audit triggers, but no approval/audit UI is wired yet.
+- The governance migration adds an approval-review function and metadata-only audit triggers; the approval and audit UI is present but requires the migration and separate company database to operate in connected mode.
 - The audit trail begins only after its migration is applied; it does not backfill prior activity.
 - Backup/recovery procedures and a restore drill are not yet implemented. Complete these before production use of important company records.
 - The finance view is not a full accounting ledger, tax report, or audited profitability statement.
@@ -108,7 +112,8 @@ The repository currently focuses on the application foundation and build validat
 
 ## Implementation status
 
-- [x] Company-neutral React + Vite foundation and responsive operations dashboard
+- [x] Synexis Technologies branding applied to the app shell, document metadata and visual theme
+- [x] React + Vite foundation and responsive operations dashboard
 - [x] Preview mode with browser-local persistence for supported records
 - [x] Supabase Auth sign-in foundation
 - [x] Organization and membership model with RLS foundation
