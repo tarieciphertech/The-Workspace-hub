@@ -113,6 +113,7 @@ The repository currently focuses on the application foundation and build validat
 ## Implementation status
 
 - [x] Synexis Technologies branding applied to the app shell, document metadata and visual theme
+- [x] Dashboard visual refresh: purple ambient lighting, branded hero panel, responsive quick actions, motion-safe micro-interactions and richer panel styling
 - [x] React + Vite foundation and responsive operations dashboard
 - [x] Preview mode with browser-local persistence for supported records
 - [x] Supabase Auth sign-in foundation
