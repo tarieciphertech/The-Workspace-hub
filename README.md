@@ -4,7 +4,7 @@
 **Tagline:** Beyond the Expected.  
 **Visual identity:** near-black / midnight backgrounds, luminous violet and purple accents, silver-white wordmark, restrained glow effects.
 
-The Workspace Hub is the internal operations workspace for Synexis Technologies, the new multi-partner umbrella company being registered in Zimbabwe. This project is separate from Cypher Technologies and must use its own company accounts, infrastructure and data.
+The Workspace Hub is the internal operations workspace for Synexis Technologies, the new multi-partner umbrella company being registered in Zimbabwe. The app will use the existing Oracle host as its deployment platform, with a separately isolated Synexis application service, database, credentials, backups and domain configuration. It must not reuse Cypher Technologies application data or disrupt existing services.
 
 The platform is designed for three founding partners, with Cipher and Shelton leading IT, and supports multiple business lines under one company workspace. Product and company-facing copy should use **Synexis Technologies**; “Workspace Hub” remains the name of the internal product.
 
@@ -45,34 +45,47 @@ The latest governance stage adds:
 ## Tech stack
 
 - React + Vite
-- Supabase Auth and PostgreSQL
-- Row Level Security (RLS) for organization-scoped access
+- React + Vite frontend
+- Planned Oracle-hosted API and PostgreSQL database, isolated for Synexis
+- Server-side authentication and organization-scoped authorization (to be implemented)
 - GitHub Actions for build validation
 
 The frontend only uses the Supabase publishable/anon key. Never put a service-role key, database password or other secret in Vite variables or the browser bundle.
 
 ## Run locally
 
-1. Copy `.env.example` to `.env.local`.
-2. Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` to the **new company's dedicated Supabase project** values when that project is ready.
-3. Install dependencies with `npm install`.
-4. Start development with `npm run dev`.
-5. Verify the production build with `npm run build`.
+1. Install dependencies with `npm install`.
+2. Start development with `npm run dev`.
+3. Verify the production build with `npm run build`.
+4. The current connected-data layer still contains Supabase-specific code and is not yet switched to the Oracle API. Until that migration is implemented, use Preview mode only.
 
 Without Supabase variables, the app opens in **Preview mode** using sample records. Preview changes are saved in the current browser's local storage so they survive refreshes, but they are not shared with other partners and are not a backup. Clearing browser storage or using another browser/device will not carry those changes over.
 
-## Supabase setup — when the partners are ready
+## Oracle deployment plan
 
-Do not connect this project to Cypher Technologies' existing Supabase account. Use a dedicated project/account for the new company.
+Oracle is the selected hosting and database platform; Supabase is no longer the target for new deployment work. The existing Supabase client and SQL migrations are legacy implementation artifacts to be reviewed and migrated—not applied to a Supabase project.
 
-1. Create the separate Supabase project and confirm that the partners agree on access ownership.
-2. Review and apply the migrations in chronological order:
-   - `supabase/migrations/20261020000000_workspace_hub_foundation.sql`
-   - `supabase/migrations/20261026000000_finance_entries.sql`
-   - `supabase/migrations/20261027000000_governance_foundation.sql`
-3. Create the first partner's user in Supabase Authentication.
-4. Copy that user's UUID from Authentication → Users.
-5. In SQL Editor, create the organization and initial founder membership. Replace the two placeholders first:
+1. Keep the current Oracle host and its existing services intact; do not rebuild the host.
+2. Deploy Synexis as a separately named service with its own environment file, network rules, domain/HTTPS configuration and logs.
+3. Use a dedicated PostgreSQL database and database role for Synexis, separate from all other applications and credentials.
+4. Implement a server-side API and authentication/authorization before connecting real company records.
+5. Port the schema and policies from the existing migration files into reviewed PostgreSQL migrations suitable for the chosen authentication model. The Supabase-specific `auth.users`, RLS policies and RPC patterns must not be copied blindly.
+6. Configure encrypted/off-host backups and test a restore before production data is entered.
+7. Verify that existing services remain healthy and test with separate partner accounts before launch.
+
+The Oracle API is **not implemented or deployed yet**. Until the frontend is migrated from Supabase to the API, use Preview mode only.
+
+## Legacy Supabase migration files
+
+These files document the first data model and are retained as migration references only:
+- `supabase/migrations/20261020000000_workspace_hub_foundation.sql`
+- `supabase/migrations/20261026000000_finance_entries.sql`
+- `supabase/migrations/20261027000000_governance_foundation.sql`
+
+Do not apply these migrations to a Supabase instance as part of the Oracle plan. Review and port their schema, constraints and authorization rules to the dedicated Synexis database. The earlier Supabase-specific founder setup instructions are no longer the deployment procedure.
+
+1. Create the first partner's user in the future Oracle-backed authentication system.
+2. Create the Synexis organization and initial founder membership through a controlled setup procedure. Do not hard-code credentials in source control.
 
 ```sql
 with new_org as (
@@ -108,7 +121,7 @@ from new_org;
 
 ## Deployment
 
-The repository currently focuses on the application foundation and build validation. Configure the chosen hosting and domain after the company name and deployment approach are agreed. The production site should use its own Supabase project and HTTPS.
+The repository currently focuses on the application foundation and build validation. Configure the chosen hosting and domain after the company name and deployment approach are agreed. The production site should use the isolated Synexis API and database on the Oracle host, HTTPS, server-side secrets and tested backups.
 
 ## Implementation status
 
@@ -116,8 +129,9 @@ The repository currently focuses on the application foundation and build validat
 - [x] Dashboard visual refresh: purple ambient lighting, branded hero panel, responsive quick actions, motion-safe micro-interactions and richer panel styling
 - [x] React + Vite foundation and responsive operations dashboard
 - [x] Preview mode with browser-local persistence for supported records
-- [x] Supabase Auth sign-in foundation
-- [x] Organization and membership model with RLS foundation
+- [x] Initial Supabase-oriented schema reference (legacy; not applied)
+- [ ] Oracle-backed API, authentication and authorization
+- [ ] Port and test organization-scoped database permissions
 - [x] Task, sales opportunity, project, QA defect and decision pages
 - [x] Finance page and migration file
 - [x] Proposed AI agent architecture and safety guardrails documented
