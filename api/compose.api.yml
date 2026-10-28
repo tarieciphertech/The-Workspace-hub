@@ -6,14 +6,13 @@ services:
     image: synexis-workspace-api:0.1.0
     container_name: synexis-workspace-api
     restart: unless-stopped
-    env_file:
-      - /opt/synexis-workspace/api.env
     environment:
       PORT: "4000"
       DB_HOST: synexis-workspace-db
       DB_PORT: "5432"
       DB_NAME: synexis_workspace
       DB_USER: synexis_app
+      DB_PASSWORD: ${SYNEXIS_APP_DB_PASSWORD:?Missing SYNEXIS_APP_DB_PASSWORD in deployment env file}
     ports:
       - "127.0.0.1:4000:4000"
     networks:
