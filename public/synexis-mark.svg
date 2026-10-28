@@ -1,1 +1,13 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><defs><linearGradient id="v" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#D8B4FF"/><stop offset="1" stop-color="#8A35E8"/></linearGradient></defs><rect width="64" height="64" rx="15" fill="#100817"/><path d="M43 12C38 7 27 8 20 14 14 19 15 25 23 29l15 7c6 3 6 7 1 11-6 5-16 4-22-1l-5 7c10 8 24 7 33-1 9-8 7-17-3-22l-15-7c-4-2-4-4-1-6 4-3 10-3 14 0z" fill="none" stroke="url(#v)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><path d="M43 12l8-5-2 10" fill="none" stroke="#D8B4FF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title">
+  <title id="title">Synexis Technologies mark</title>
+  <defs>
+    <linearGradient id="synexis-violet" x1="12" y1="10" x2="52" y2="54" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#D8B4FF"/>
+      <stop offset="1" stop-color="#8A35E8"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="15" fill="#100817"/>
+  <path d="M43.5 17.5C39.8 14.8 33.8 13.8 28.7 15.5C23.4 17.2 20.5 20.6 21.3 24.1C22 27.1 25.2 28.8 30.2 31L36.7 33.9C41.6 36.1 44 38.4 43.5 42.1C42.9 47.2 37.2 50.4 30.8 50.4C25.8 50.4 21.4 48.8 18 45.9" fill="none" stroke="url(#synexis-violet)" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M35.5 14.2L44 16.8L42.1 25.1" fill="none" stroke="#D8B4FF" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M18.2 45.8L17.1 51.5L23 50.2" fill="none" stroke="#8A35E8" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
